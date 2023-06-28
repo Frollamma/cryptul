@@ -1,9 +1,10 @@
 from string import printable
 from Crypto.Util.Padding import pad
-from Crypto.Util.number import isPrime, inverse, bytes_to_long
+from Crypto.Util.number import isPrime, inverse, bytes_to_long, GCD
 from sympy import Mod
 import random
 from sympy import integer_nthroot, sqrt
+import math
 
 # Remember:
 # from sympy.ntheory import discrete_log as dlog
@@ -292,3 +293,61 @@ class DSACracker:
 
 
 # RNG (Random number generation)
+class LCGCracker:
+    def __init__(self, x: list[int] = None, n = None, a = None, b = None):
+        self.x = x
+        self.n = n
+        self.a = a
+        self.b = b
+
+    def next(self):
+        assert self.x and len(self.x) >= 1, "At least one value of x is required"
+
+        last_index = len(self.x) - 1
+        next_value = Mod(self.a * self.x[last_index] + self.b, self.n)  
+        self.x.append(next_value)
+
+        return next_value
+    
+    def get_b(self):
+        assert self.n, "n is required"
+        assert self.a, "a is required"
+        assert self.x and len(self.x) >= 2, "At least two values of x are required"
+
+        self.b = Mod(self.x[1] - self.a * self.x[0], self.n)
+
+        return self.b
+    
+    def get_a(self):
+        assert self.n, "n is required"
+        assert self.x and len(self.x) >= 3, "At least three values of x are required"
+
+        h = self.x[2] - self.x[1]
+        f = self.x[1] - self.x[0]
+
+        self.a = Mod(h * inverse(f, self.n), self.n)
+
+        return self.a        
+
+    def get_n(self):
+        """
+        Let x be a sequence generated with LCG, we want to get the modulus n, with this approach we can get it if we have "enough" values of x 
+        """
+        assert self.x and len(self.x) >= 4, "At least four values of x are required"
+
+    
+        t = [self.x[i+1] - self.x[i] for i in range(len(self.x) - 1)]
+        z = [t[i - 1] * t[i + 1] - t[i]**2 for i in range(1, len(t) - 1)]
+        self.n = math.gcd(*z)
+
+        return self.n
+
+
+
+
+
+
+        
+    
+
+
