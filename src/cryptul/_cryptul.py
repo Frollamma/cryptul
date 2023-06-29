@@ -342,6 +342,29 @@ class LCGCracker:
 
         return self.n
 
+class RSA:
+    def __init__(self, n, e=65537, d=None, p=None, q=None, phi=None):
+        self.n = n
+        self.e = e
+        self.p = p
+        self.q = q
+        self.phi = phi
+        self.d = d
+
+        if p and q:
+            self.phi = (p-1)*(q-1)
+        
+        if self.phi:
+            self.d = inverse(self.e, self.phi)
+    
+    def encrypt(self, message: int):
+        return pow(message, self.e, self.n)
+    
+
+    def decrypt(self, enc_message: int):
+        return pow(enc_message, self.d, self.n)
+
+
 
 
 
