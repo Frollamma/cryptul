@@ -5,17 +5,16 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "cryptul"
 version = "0.0.3"
-authors = [
-  { name="Frollo", email="fral01@protonmail.com" },
-]
+authors = [{ name = "Frollo", email = "fral01@protonmail.com" }]
 description = "A set of tools for crypto CTFs and more"
 readme = "README.md"
 requires-python = ">=3.11"
 classifiers = [
-    "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
 ]
+dependencies = ["pycryptodome>=3.18.0", "sympy>=1.12"]
 
 [project.urls]
 "Homepage" = "https://github.com/Frollamma/cryptul/"
