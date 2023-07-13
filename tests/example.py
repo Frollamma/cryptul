@@ -1,9 +1,11 @@
-from hashlib import sha1
-from Crypto.Util.number import bytes_to_long, inverse
-import time
-from cryptul import DSACracker
 import random
+import time
+from hashlib import sha1
+
+from Crypto.Util.number import bytes_to_long, inverse
 from sympy import Mod
+
+from cryptul import DSACracker
 
 
 def sign(m, g, p, q, x, k):
