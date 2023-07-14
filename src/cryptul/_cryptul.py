@@ -1,10 +1,10 @@
-from string import printable
-from Crypto.Util.Padding import pad
-from Crypto.Util.number import isPrime, inverse, bytes_to_long, GCD
-from sympy import Mod
-import random
-from sympy import integer_nthroot, sqrt
 import math
+import random
+from string import printable
+
+from Crypto.Util.number import GCD, bytes_to_long, inverse, isPrime
+from Crypto.Util.Padding import pad
+from sympy import Mod, integer_nthroot, sqrt
 
 # Remember:
 # from sympy.ntheory import discrete_log as dlog
@@ -75,12 +75,12 @@ def split_in_blocks(message: bytes, block_length: int):
     number_of_full_blocks = len(message) // block_length
 
     blocks = [
-        message[i * block_length: (i + 1) * block_length]
+        message[i * block_length : (i + 1) * block_length]
         for i in range(number_of_full_blocks)
     ]
 
     if len(message) % block_length != 0:
-        blocks.append(pad(message[number_of_full_blocks + 1:], block_length))
+        blocks.append(pad(message[number_of_full_blocks + 1 :], block_length))
 
     return blocks
 
@@ -120,8 +120,7 @@ class DSACracker:
         if check:
             if not (
                 isinstance(p, int),
-                isinstance(q, int) and isinstance(
-                    g, int) and isinstance(y, int),
+                isinstance(q, int) and isinstance(g, int) and isinstance(y, int),
             ):
                 raise ValueError("p, q, g, y must be an integers")
 
@@ -156,8 +155,7 @@ class DSACracker:
             else:
                 if h != None:
                     if g != pow(h, (p - 1) // q, p):
-                        raise ValueError(
-                            "g must be equal to pow(h, (p - 1) // q, p)")
+                        raise ValueError("g must be equal to pow(h, (p - 1) // q, p)")
 
             if not isinstance(y, int):
                 if y != None:
@@ -226,8 +224,7 @@ class DSACracker:
         return r, s
 
     def verify(self, message: int, r: int, s: int):
-        a = pow(self.g, self.H(message) *
-                Mod(inverse(s, self.q), self.q), self.p)
+        a = pow(self.g, self.H(message) * Mod(inverse(s, self.q), self.q), self.p)
         b = pow(self.y, Mod(r * inverse(s, self.q), self.q), self.p)
 
         is_signature_valid = (a * b % self.p) % self.q == r
@@ -294,7 +291,7 @@ class DSACracker:
 
 # RNG (Random number generation)
 class LCGCracker:
-    def __init__(self, x: list[int] = None, n = None, a = None, b = None):
+    def __init__(self, x: list[int] = None, n=None, a=None, b=None):
         self.x = x
         self.n = n
         self.a = a
@@ -304,11 +301,11 @@ class LCGCracker:
         assert self.x and len(self.x) >= 1, "At least one value of x is required"
 
         last_index = len(self.x) - 1
-        next_value = Mod(self.a * self.x[last_index] + self.b, self.n)  
+        next_value = Mod(self.a * self.x[last_index] + self.b, self.n)
         self.x.append(next_value)
 
         return next_value
-    
+
     def get_b(self):
         assert self.n, "n is required"
         assert self.a, "a is required"
@@ -317,7 +314,7 @@ class LCGCracker:
         self.b = Mod(self.x[1] - self.a * self.x[0], self.n)
 
         return self.b
-    
+
     def get_a(self):
         assert self.n, "n is required"
         assert self.x and len(self.x) >= 3, "At least three values of x are required"
@@ -327,20 +324,20 @@ class LCGCracker:
 
         self.a = Mod(h * inverse(f, self.n), self.n)
 
-        return self.a        
+        return self.a
 
     def get_n(self):
         """
-        Let x be a sequence generated with LCG, we want to get the modulus n, with this approach we can get it if we have "enough" values of x 
+        Let x be a sequence generated with LCG, we want to get the modulus n, with this approach we can get it if we have "enough" values of x
         """
         assert self.x and len(self.x) >= 4, "At least four values of x are required"
 
-    
-        t = [self.x[i+1] - self.x[i] for i in range(len(self.x) - 1)]
-        z = [t[i - 1] * t[i + 1] - t[i]**2 for i in range(1, len(t) - 1)]
+        t = [self.x[i + 1] - self.x[i] for i in range(len(self.x) - 1)]
+        z = [t[i - 1] * t[i + 1] - t[i] ** 2 for i in range(1, len(t) - 1)]
         self.n = math.gcd(*z)
 
         return self.n
+
 
 class RSA:
     def __init__(self, n, e=65537, d=None, p=None, q=None, phi=None):
@@ -352,25 +349,13 @@ class RSA:
         self.d = d
 
         if p and q:
-            self.phi = (p-1)*(q-1)
-        
+            self.phi = (p - 1) * (q - 1)
+
         if self.phi:
             self.d = inverse(self.e, self.phi)
-    
+
     def encrypt(self, message: int):
         return pow(message, self.e, self.n)
-    
 
     def decrypt(self, enc_message: int):
         return pow(enc_message, self.d, self.n)
-
-
-
-
-
-
-
-        
-    
-
-
