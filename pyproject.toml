@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cryptul"
-version = "0.0.4"
+version = "0.0.5"
 authors = [{ name = "Frollo", email = "fral01@protonmail.com" }]
 description = "A set of tools for crypto CTFs and more"
 readme = "README.md"

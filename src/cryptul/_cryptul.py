@@ -36,9 +36,22 @@ CCIT_FLAG_CHARS = [c for c in printable if c.isalnum()] + ["_", "{", "}"]
 
 def xor(a: bytes, b: bytes, strict: bool = True) -> bytes:
     if strict and len(a) != len(b):
-        raise ValueError("When strict=True you can't xor two bytes variables with different lengths")
+        raise ValueError(
+            "When strict=True you can't xor two bytes variables with different lengths"
+        )
 
-    result = bytes(c1 ^ c2 for c1, c2 in zip(a, b))
+    if len(a) < len(b):
+        c = a
+        a = b
+        b = c
+
+    # Now we have that len(a) >= len(b)
+
+    result = []
+    for i in range(len(a)):
+        result.append(a[i] ^ b[i % len(b)])
+    result = bytes(result)
+
     return result
 
 
@@ -67,7 +80,6 @@ def flip(to_flip: bytes, initial_value: bytes, final_value: bytes) -> bytes:
     return flipped
 
 
-# Ciphers
 # Block ciphers
 
 
@@ -75,14 +87,109 @@ def split_in_blocks(message: bytes, block_length: int):
     number_of_full_blocks = len(message) // block_length
 
     blocks = [
-        message[i * block_length : (i + 1) * block_length]
+        message[i * block_length: (i + 1) * block_length]
         for i in range(number_of_full_blocks)
     ]
 
     if len(message) % block_length != 0:
-        blocks.append(pad(message[number_of_full_blocks + 1 :], block_length))
+        blocks.append(pad(message[number_of_full_blocks + 1:], block_length))
 
     return blocks
+
+
+# Stream ciphers
+
+# CBC mode
+
+
+class CBCCracker:
+    def __init__(
+        self,
+        encrypt,
+        decrypt,
+        block_size: int,
+    ):
+        self.encrypt = encrypt
+        self.decrypt = decrypt
+        self.block_size = block_size
+
+        """
+        encrypt: Function that returns the ciphertext given the plaintext
+        decrypt: Function that returns the plaintext given the ciphertext
+        """
+
+    # to_flip: bytes, initial_value: bytes, final_value: bytes
+
+    def flip_iv(self, ct: bytes, final_pt: bytes, iv_to_flip: bytes = None):
+        assert (
+            len(ct) == self.block_size
+        ), f"The ciphertext must have the same length of the block ({self.block_size} bytes)"
+
+        if iv_to_flip == None:
+            iv_to_flip = b"A" * self.block_size
+
+        initial_pt = self.decrypt(ct, iv_to_flip)
+
+        iv_flipped = flip(iv_to_flip, initial_pt, final_pt)
+
+        return iv_flipped
+
+    def crack_fixed_iv_with_decrypt(self, final_pt: bytes):
+        """
+        Returns a ciphertext and an IV that, when decrypted, becames the plaintext final_pt.
+        You need to use the decryption function
+        """
+
+        final_pt = pad(final_pt, self.block_size)
+
+        final_pt_blocks = split_in_blocks(final_pt, self.block_size)[::-1]
+
+        # iterate on the blocks in reverse order
+        final_ct_blocks = [b"A" * self.block_size]
+        i = 0
+        while i < len(final_pt_blocks):
+            new_ct_block = self.flip_iv(final_ct_blocks[i], final_pt_blocks[i])
+            final_ct_blocks.append(b"A" * self.block_size)
+
+        # The last element is the IV
+        final_iv = final_ct_blocks[-1]
+        # Remove last element and restore original order
+        final_ct_blocks = final_ct_blocks[:-1][::-1]
+        final_ct = b"".join(final_ct_blocks)
+
+        return final_ct, final_iv
+
+    def crack_fixed_iv_with_encrypt(
+        self, initial_iv: bytes, final_pt: bytes, initial_pt: bytes = None
+    ):
+        """
+        Returns a ciphertext and an IV such that, when decrypted, the first block becames the first block of the plaintext final_pt. You need to use the encryption function once.
+        """
+        if initial_pt == None:
+            initial_pt = b"A" * self.block_size
+
+        # final_pt = pad(final_pt, self.block_size)
+        # initial_pt = pad(initial_pt, self.block_size)
+
+        assert (
+            len(initial_iv) == self.block_size
+        ), f"The initial IV must have length equal to the block length ({self.block_size})"
+        # assert (
+        #     len(final_pt) > 0 and len(final_pt) % self.block_size == 0
+        # ), f"The final plaintext must have length that is a positive multiple of the block length ({self.block_size})"
+        # assert (
+        #     len(final_pt) > 0 and len(initial_pt) % self.block_size == 0
+        # ), f"The initial plaintext must have length that is a positive multiple of the block length ({self.block_size})"
+        # assert len(final_pt) == len(
+        #     initial_pt
+        # ), f"The final and the initial plaintext must have the same length"
+
+        ct = self.encrypt(initial_pt)
+        final_iv = flip(
+            initial_iv, initial_pt[: self.block_size], final_pt[: self.block_size]
+        )
+
+        return ct, final_iv
 
 
 # RSA
@@ -120,7 +227,8 @@ class DSACracker:
         if check:
             if not (
                 isinstance(p, int),
-                isinstance(q, int) and isinstance(g, int) and isinstance(y, int),
+                isinstance(q, int) and isinstance(
+                    g, int) and isinstance(y, int),
             ):
                 raise ValueError("p, q, g, y must be an integers")
 
@@ -155,7 +263,8 @@ class DSACracker:
             else:
                 if h != None:
                     if g != pow(h, (p - 1) // q, p):
-                        raise ValueError("g must be equal to pow(h, (p - 1) // q, p)")
+                        raise ValueError(
+                            "g must be equal to pow(h, (p - 1) // q, p)")
 
             if not isinstance(y, int):
                 if y != None:
@@ -224,7 +333,8 @@ class DSACracker:
         return r, s
 
     def verify(self, message: int, r: int, s: int):
-        a = pow(self.g, self.H(message) * Mod(inverse(s, self.q), self.q), self.p)
+        a = pow(self.g, self.H(message) *
+                Mod(inverse(s, self.q), self.q), self.p)
         b = pow(self.y, Mod(r * inverse(s, self.q), self.q), self.p)
 
         is_signature_valid = (a * b % self.p) % self.q == r
@@ -298,7 +408,8 @@ class LCGCracker:
         self.b = b
 
     def next(self):
-        assert self.x and len(self.x) >= 1, "At least one value of x is required"
+        assert self.x and len(
+            self.x) >= 1, "At least one value of x is required"
 
         last_index = len(self.x) - 1
         next_value = Mod(self.a * self.x[last_index] + self.b, self.n)
@@ -309,7 +420,8 @@ class LCGCracker:
     def get_b(self):
         assert self.n, "n is required"
         assert self.a, "a is required"
-        assert self.x and len(self.x) >= 2, "At least two values of x are required"
+        assert self.x and len(
+            self.x) >= 2, "At least two values of x are required"
 
         self.b = Mod(self.x[1] - self.a * self.x[0], self.n)
 
@@ -317,7 +429,8 @@ class LCGCracker:
 
     def get_a(self):
         assert self.n, "n is required"
-        assert self.x and len(self.x) >= 3, "At least three values of x are required"
+        assert self.x and len(
+            self.x) >= 3, "At least three values of x are required"
 
         h = self.x[2] - self.x[1]
         f = self.x[1] - self.x[0]
@@ -330,7 +443,8 @@ class LCGCracker:
         """
         Let x be a sequence generated with LCG, we want to get the modulus n, with this approach we can get it if we have "enough" values of x
         """
-        assert self.x and len(self.x) >= 4, "At least four values of x are required"
+        assert self.x and len(
+            self.x) >= 4, "At least four values of x are required"
 
         t = [self.x[i + 1] - self.x[i] for i in range(len(self.x) - 1)]
         z = [t[i - 1] * t[i + 1] - t[i] ** 2 for i in range(1, len(t) - 1)]
