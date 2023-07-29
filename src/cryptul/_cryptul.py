@@ -34,9 +34,9 @@ CCIT_FLAG_CHARS = [c for c in printable if c.isalnum()] + ["_", "{", "}"]
 # Bits operations
 
 
-def xor(a: bytes, b: bytes) -> bytes:
-    if len(a) != len(b):
-        return False
+def xor(a: bytes, b: bytes, strict: bool = True) -> bytes:
+    if strict and len(a) != len(b):
+        raise ValueError("When strict=True you can't xor two bytes variables with different lengths")
 
     result = bytes(c1 ^ c2 for c1, c2 in zip(a, b))
     return result
